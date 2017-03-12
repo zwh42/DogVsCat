@@ -163,9 +163,9 @@ def flow_setup():
     print("train sample count: ", len(train_samples), "\nvalidation sample count: ", len(validation_samples), "\ntest sample count: ", len(test_samples))
     print("sample data example:\n", train_samples[random.randint(0, len(train_samples))])
     
-    train_generator = sample_generator(train_samples, batch_size = 128)
-    validation_generator = sample_generator(validation_samples, batch_size = 128)
-    test_generator = sample_generator(test_samples, batch_size = 128)
+    train_generator = sample_generator(train_samples, batch_size = 64)
+    validation_generator = sample_generator(validation_samples, batch_size = 64)
+    test_generator = sample_generator(test_samples, batch_size = 64)
 
     #for i in range(10):
     #    print(next(train_generator))
@@ -177,7 +177,7 @@ def flow_setup():
     history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=10, verbose=1)
     score = model.evaluate_generator(test_generator, 1500, max_q_size=10, nb_worker=1, pickle_safe=False)
     model.save("dog_vs_cat_model.h5")
-	print(score)
+    print(score)
 
 
 
