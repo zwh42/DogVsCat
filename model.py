@@ -27,7 +27,7 @@ from keras.layers.core import Lambda, Dense, Activation, Flatten
 import matplotlib.pyplot as plt
 plt.rcParams['figure.figsize'] = (10.0, 5.0)
 
-def resize_image(image, shape = (500, 500)):
+def resize_image(image, shape = (200, 200)):
     resized_image = cv2.resize(image, shape)
     return resized_image
 
@@ -136,7 +136,7 @@ def model_setup(input_shape = (500, 500, 3), num_classes = 2):
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
     model.add(Dense(num_classes, activation='sigmoid'))
-    model.compile(loss = 'categorical_crossentropy',  optimizer="adam", metrics=['accuracy'])
+    model.compile(loss = 'categorical_crossentropy',  optimizer="rmsprop", metrics=['accuracy'])
     print(model.summary())
     return model
 
@@ -149,11 +149,11 @@ def flow_setup():
     raw_samples = load_samples(TRAIN_DATA_PATH_LIST, one_hot_encoding_dict)
     print("raw sample loaded.")
     
-    image_shape_counter = raw_data_analysis(raw_samples, one_hot_encoding_dict)
+    #image_shape_counter = raw_data_analysis(raw_samples, one_hot_encoding_dict)
     
     
-    if DO_VISUALIZE:
-        visualize_image_size_distribution(image_shape_counter)
+    #if DO_VISUALIZE:
+    #    visualize_image_size_distribution(image_shape_counter)
     
     train_validation_samples, test_samples = train_test_split(raw_samples, test_size = 0.2, random_state = 42)
     train_samples, validation_samples = train_test_split(train_validation_samples, test_size = 0.2, random_state = 42)
@@ -163,10 +163,15 @@ def flow_setup():
     train_generator = sample_generator(train_samples, batch_size = 32)
     validation_generator = sample_generator(validation_samples, batch_size = 32)
     test_generator = sample_generator(test_samples, batch_size = 32)
+
+    for i in range(10):
+        print(next(train_generator))
+        print(next(test_generator))
+
     
-    model = model_setup(input_shape = (500, 500, 3), num_classes = len(LABEL_LIST))
+    model = model_setup(input_shape = (200, 200, 3), num_classes = len(LABEL_LIST))
     print("start model fitting...")
-    history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=1, verbose=1)
+    history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=3, verbose=1)
     score = model.evaluate_generator(test_generator, 1500, max_q_size=10, nb_worker=1, pickle_safe=False)
     print(score)
 
