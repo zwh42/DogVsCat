@@ -233,9 +233,10 @@ def flow_setup():
 
     for name in model_dict.keys():
         model = model_dict[name]
+        print(name + " fitting started...")
         history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=10, verbose=1)
         score = model.evaluate_generator(test_generator, 1500, max_q_size=10, nb_worker=1, pickle_safe=False)
-        print("score:", score)
+        print(name + " score:", score)
         model.save("./models/" + name + ".h5" )
 
 
