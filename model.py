@@ -138,16 +138,66 @@ def model_setup(input_shape = (500, 500, 3), num_classes = 2):
     model.add(Dense(64))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
+    
     model.add(Dense(num_classes, activation='sigmoid'))
+    
+
     model.compile(loss = 'categorical_crossentropy',  optimizer="rmsprop", metrics=['accuracy'])
     print(model.summary())
     return model
+
+
+def model_flow_setup(input_shape, num_classes):
+    model = Sequential()
+    
+    
+    model.add(Lambda(lambda x: x/127.5 -1., input_shape = input_shape))
+    model.add(Convolution2D(32,3,3))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D((2, 2)))
+    
+    model.add(Convolution2D(32,3,3))    
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D((2, 2)))
+    
+    model.add(Convolution2D(64,3,3))    
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D((2, 2)))    
+    
+    model.add(Flatten())
+    model.add(Dense(64))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))    
+    model.add(Dense(num_classes))
+    return model
+
+
+
+
+
+def create_models(input_shape = (500, 500, 3), num_classes = 2, output_activation_list = ['sigmoid'] , loss_function_list = ['categorical_crossentropy'], optimizer_list = ["rmsprop", "adam"], metrics_list=['accuracy']):
+    model_dict = {}
+    for loss_function in loss_function_list:
+        for optimizer in optimizer_list:
+            for output_activation in output_activation_list:
+                model = model_flow_setup(input_shape, num_classes)
+                model.add(Activation(output_activation))
+                
+                model.compile(loss = loss_function,  optimizer = optimizer , metrics = ['accuracy'])
+                name = "activation=" + output_activation + "_loss=" + loss_function + "_optimizer=" + optimizer
+                print("model generation: " + name)
+                print(model.summary())
+                model_dict[name] = model
+    
+    return model_dict
+
 
 
 def flow_setup():
     
     one_hot_encoding_dict = label_one_hot_encoding(LABEL_LIST)
     print("label encoding is done.")
+    
     
     raw_samples = load_samples(TRAIN_DATA_PATH_LIST, one_hot_encoding_dict)
     print("raw sample loaded.")
@@ -171,14 +221,22 @@ def flow_setup():
     #    print(next(train_generator))
     #    print(next(test_generator))
 
-    
+    '''
     model = model_setup(input_shape = (200, 200, 3), num_classes = len(LABEL_LIST))
     print("start model fitting...")
     history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=10, verbose=1)
     score = model.evaluate_generator(test_generator, 1500, max_q_size=10, nb_worker=1, pickle_safe=False)
     model.save("dog_vs_cat_model.h5")
     print(score)
+    '''
+    model_dict =  create_models(input_shape = IMAGE_INPUT_SHAPE, num_classes = 2, output_activation_list = ['sigmoid', 'softmax', 'relu'] , loss_function_list = ['categorical_crossentropy' ,'mse'], optimizer_list = ["rmsprop", "adam", 'sgd'], metrics_list=['accuracy'])
 
+    for name in model_dict.keys():
+        model = model_dict[name]
+        history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=10, verbose=1)
+        score = model.evaluate_generator(test_generator, 1500, max_q_size=10, nb_worker=1, pickle_safe=False)
+        print("score:", score)
+        model.save("./models/" + name + ".h5" )
 
 
 if __name__ == "__main__":
@@ -187,8 +245,10 @@ if __name__ == "__main__":
     DO_VISUALIZE = False
     TRAIN_DATA_PATH_LIST = ["./train"]
     TEST_DATA_PATH_LIST = ["./test"]
-
-    LABEL_LIST = ["dog", "cat"]
+    
+    IMAGE_INPUT_SHAPE = (200, 200, 3)
+    
+    LABEL_LIST = sorted(["dog", "cat"])
     
     flow_setup()
     
