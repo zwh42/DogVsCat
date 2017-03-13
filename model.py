@@ -5,9 +5,8 @@ Created on Sun Mar 12 19:10:20 2017
 @author: wenhao zhao
 """
 
-from keras.applications.resnet50 import ResNet50
-from keras.preprocessing import image
-from keras.applications.resnet50 import preprocess_input, decode_predictions
+
+
 
 import numpy as np
 import os
@@ -27,12 +26,23 @@ from keras.models import Sequential
 from keras.layers import Dropout, ELU
 from keras.layers.convolutional import Cropping2D, Convolution2D, MaxPooling2D
 from keras.layers.core import Lambda, Dense, Activation, Flatten
+from keras.layers.pooling import GlobalAveragePooling2D
+
+from keras.models import Model
+from keras.applications.resnet50 import ResNet50
+from keras.applications.vgg16 import VGG16
+from keras.applications.vgg19 import VGG19
+from keras.preprocessing import image
+from keras.applications.resnet50 import preprocess_input, decode_predictions
+
+
+
 
 import matplotlib.pyplot as plt
 plt.rcParams['figure.figsize'] = (10.0, 5.0)
 
-def resize_image(image, shape = (200, 200)):
-    resized_image = cv2.resize(image, shape)
+def resize_image(image, output_shape = (224, 224,3)):
+    resized_image = cv2.resize(image, (output_shape[0], output_shape[0]))
     return resized_image
 
 
@@ -106,7 +116,7 @@ def sample_generator(samples, batch_size=10):
             
             for sample in batch_samples:
                 image = cv2.imread(sample[1])
-                image = resize_image(image)
+                image = resize_image(image, output_shape = IMAGE_INPUT_SHAPE)
 
                 images.append(image)
                 one_hot_labels.append(sample[0])
@@ -179,7 +189,7 @@ def model_flow_setup(input_shape, num_classes):
 
 
 
-def create_models(input_shape = (500, 500, 3), num_classes = 2, output_activation_list = ['sigmoid'] , loss_function_list = ['categorical_crossentropy'], optimizer_list = ["rmsprop", "adam"], metrics_list=['accuracy']):
+def create_models(input_shape = (224, 224, 3), num_classes = 2, output_activation_list = ['sigmoid'] , loss_function_list = ['categorical_crossentropy'], optimizer_list = ["rmsprop", "adam"], metrics_list=['accuracy']):
     model_dict = {}
     for loss_function in loss_function_list:
         for optimizer in optimizer_list:
@@ -198,25 +208,35 @@ def create_models(input_shape = (500, 500, 3), num_classes = 2, output_activatio
 
 
 
-def fine_tune_pretrained_model(num_classes = 2, pre_trained_model_list = ["ResNet"]):
+def fine_tune_pretrained_model(input_shape = (224, 224, 3) , num_classes = 2, pre_trained_model_list = ["ResNet"]):
     model_dict = {}
     
     for model_type in pre_trained_model_list:
         if model_type == "ResNet":
-            pre_trained_model = ResNet50(weights='imagenet', include_top = False)
+            pre_trained_model = ResNet50(weights='imagenet', input_shape = input_shape, include_top = False)
+        elif model_type == "VGG19":
+            pre_trained_model = VGG19(weights='imagenet', input_shape = input_shape, include_top=False)
+        elif model_type == "VGG16":
+            pre_trained_model = VGG19(weights='imagenet', input_shape = input_shape, include_top=False)
     
+        print("load pre-trainned model weight: " + model_type)
+        
         for layer in pre_trained_model.layers:
             layer.trainable = False  # freeze the weight
 
-        x = pre_trained_model.output
-        x = MaxPooling2D() (x)
-        x = Flatten() (x)
-        x = Dense(64, activation = "relu") (x)
+        
+        pre_trained_model.summary()    
+        x = pre_trained_model.output       
+        x = Flatten(name='flatten')(x)        
+        x = Dense(4096, activation = "relu", name="fc4096") (x)
+        x = Dense(2048, activation = "relu", name="fc2048") (x)
+        x = Dense(64, activation = "relu", name="fc64") (x)
         x = Dropout(0.5) (x)    
-        x = Dense(num_classes) (x)
+        x = Dense(num_classes, name="fc_output") (x)
         predictions =  Activation('softmax') (x)
         
         model = Model(input = pre_trained_model.input,  output=predictions)
+        model.compile(loss = 'categorical_crossentropy',  optimizer = "rmsprop" , metrics = ['accuracy'])
         print(model.summary())
         model_dict[model_type] = model
     return model_dict
@@ -260,10 +280,13 @@ def flow_setup():
     print(score)
     '''
     if RUN_HOMEBREW_MODEL:    
-        model_dict =  create_models(input_shape = IMAGE_INPUT_SHAPE, num_classes = 2, output_activation_list = ['sigmoid', 'softmax'] , loss_function_list = ['categorical_crossentropy' ], optimizer_list = ["rmsprop", "adam"], metrics_list=['accuracy'])
+        print("build home brew model...")
+        model_dict =  create_models(input_shape = (224, 224, 3), num_classes = 2, output_activation_list = ['sigmoid', 'softmax'] , loss_function_list = ['categorical_crossentropy' ], optimizer_list = ["rmsprop", "adam"], metrics_list=['accuracy'])
     else:
-        model_dict = fine_tune_pretrained_model(num_classes = 2, pre_trained_model_list = ["ResNet"])
+        print("build model from pre-trainned model...")
+        model_dict = fine_tune_pretrained_model(num_classes = 2, pre_trained_model_list = ["VGG16","VGG19","ResNet"])
 
+    print("model build finished.")    
     for name in model_dict.keys():
         model = model_dict[name]
         print(name + " fitting started...")
@@ -284,7 +307,7 @@ if __name__ == "__main__":
     TRAIN_DATA_PATH_LIST = ["./train"]
     TEST_DATA_PATH_LIST = ["./test"]
     
-    IMAGE_INPUT_SHAPE = (200, 200, 3)
+    IMAGE_INPUT_SHAPE = (224, 224, 3)
     
     LABEL_LIST = sorted(["dog", "cat"])
     
