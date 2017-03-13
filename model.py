@@ -5,6 +5,10 @@ Created on Sun Mar 12 19:10:20 2017
 @author: wenhao zhao
 """
 
+from keras.applications.resnet50 import ResNet50
+from keras.preprocessing import image
+from keras.applications.resnet50 import preprocess_input, decode_predictions
+
 import numpy as np
 import os
 import glob
@@ -193,6 +197,32 @@ def create_models(input_shape = (500, 500, 3), num_classes = 2, output_activatio
 
 
 
+
+def fine_tune_pretrained_model(num_classes = 2, pre_trained_model_list = ["ResNet"]):
+    model_dict = {}
+    
+    for model_type in pre_trained_model_list:
+        if model_type == "ResNet":
+            pre_trained_model = ResNet50(weights='imagenet', include_top = False)
+    
+        for layer in pre_trained_model.layers:
+            layer.trainable = False  # freeze the weight
+
+        x = pre_trained_model.output
+        x = MaxPooling2D() (x)
+        x = Flatten() (x)
+        x = Dense(64, activation = "relu") (x)
+        x = Dropout(0.5) (x)    
+        x = Dense(num_classes) (x)
+        predictions =  Activation('softmax') (x)
+        
+        model = Model(input = pre_trained_model.input,  output=predictions)
+        print(model.summary())
+        model_dict[model_type] = model
+    return model_dict
+
+
+
 def flow_setup():
     
     one_hot_encoding_dict = label_one_hot_encoding(LABEL_LIST)
@@ -229,7 +259,10 @@ def flow_setup():
     model.save("dog_vs_cat_model.h5")
     print(score)
     '''
-    model_dict =  create_models(input_shape = IMAGE_INPUT_SHAPE, num_classes = 2, output_activation_list = ['sigmoid', 'softmax', 'relu'] , loss_function_list = ['categorical_crossentropy' ,'mse'], optimizer_list = ["rmsprop", "adam", 'sgd'], metrics_list=['accuracy'])
+    if RUN_HOMEBREW_MODEL:    
+        model_dict =  create_models(input_shape = IMAGE_INPUT_SHAPE, num_classes = 2, output_activation_list = ['sigmoid', 'softmax'] , loss_function_list = ['categorical_crossentropy' ], optimizer_list = ["rmsprop", "adam"], metrics_list=['accuracy'])
+    else:
+        model_dict = fine_tune_pretrained_model(num_classes = 2, pre_trained_model_list = ["ResNet"])
 
     for name in model_dict.keys():
         model = model_dict[name]
@@ -238,6 +271,10 @@ def flow_setup():
         score = model.evaluate_generator(test_generator, 1500, max_q_size=10, nb_worker=1, pickle_safe=False)
         print(name + " score:", score)
         model.save("./models/" + name + ".h5" )
+
+    
+
+        
 
 
 if __name__ == "__main__":
@@ -250,6 +287,10 @@ if __name__ == "__main__":
     IMAGE_INPUT_SHAPE = (200, 200, 3)
     
     LABEL_LIST = sorted(["dog", "cat"])
+    
+    PRE_TRAINED_MODEL = ["ResNet"]
+    
+    RUN_HOMEBREW_MODEL = False
     
     flow_setup()
     
