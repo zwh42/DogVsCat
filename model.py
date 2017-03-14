@@ -228,8 +228,8 @@ def fine_tune_pretrained_model(input_shape = (224, 224, 3) , num_classes = 2, pr
         pre_trained_model.summary()    
         x = pre_trained_model.output       
         x = Flatten(name='flatten')(x)        
-        x = Dense(4096, activation = "relu", name="fc4096") (x)
-        x = Dense(2048, activation = "relu", name="fc2048") (x)
+        x = Dense(256, activation = "relu", name="fc256") (x)
+        #x = Dense(2048, activation = "relu", name="fc2048") (x)
         x = Dense(64, activation = "relu", name="fc64") (x)
         x = Dropout(0.5) (x)    
         x = Dense(num_classes, name="fc_output") (x)
@@ -263,9 +263,9 @@ def flow_setup():
     print("train sample count: ", len(train_samples), "\nvalidation sample count: ", len(validation_samples), "\ntest sample count: ", len(test_samples))
     print("sample data example:\n", train_samples[random.randint(0, len(train_samples))])
     
-    train_generator = sample_generator(train_samples, batch_size = 64)
-    validation_generator = sample_generator(validation_samples, batch_size = 64)
-    test_generator = sample_generator(test_samples, batch_size = 64)
+    train_generator = sample_generator(train_samples, batch_size = 100)
+    validation_generator = sample_generator(validation_samples, batch_size = 100)
+    test_generator = sample_generator(test_samples, batch_size = 100)
 
     #for i in range(10):
     #    print(next(train_generator))
@@ -289,11 +289,13 @@ def flow_setup():
     print("model build finished.")    
     for name in model_dict.keys():
         model = model_dict[name]
+        
         print(name + " fitting started...")
-        history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=10, verbose=1)
+        history_object = model.fit_generator(train_generator, samples_per_epoch= int(len(train_samples)), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=3, verbose=1)
         score = model.evaluate_generator(test_generator, 1500, max_q_size=10, nb_worker=1, pickle_safe=False)
         print(name + " score:", score)
         model.save("./models/" + name + ".h5" )
+        print("model " + name + "saved.")
 
     
 
