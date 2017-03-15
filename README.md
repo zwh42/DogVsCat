@@ -28,11 +28,16 @@
 
 * 原始数据集中共有25000张已标记的图片，其中猫/狗图片各12500张，数目相当，因此不存在训练样本数量不均衡所导致的模型偏差。
 * 原始数据集中图片的尺寸分布如图所示。可以看出图片的尺寸并不一致，无法直接作为模型的输入，需要进行尺寸的归一化处理。
+![width](./resource/width_distribution.png)
+![height](./resource/height_distribution.png)
+
 * 人工查看了部分图片，发现训练集已经包括了多种不同背景，光照条件，动物姿态，颜色等的图片。作为一个二分类问题，我认为现有的数据集已足够模型使用，不需要进行进一步的data augmentation.
+* 原始图片是通过文件名中的"dog"或者"cat"来标记🐶/🐱的，为方便之后模型的训练，这里采用了one-hot encoding的方法来将标记转换为2维的向量。
 
 ### 模型建立
 1. from sractch:
-	使用keras搭建了。
+	使用keras建立具有三层Convolutional Layer的模型，输入为(200, 200, 3)的图片, 输出为2维向量。
+2.  stand on the shoulders of giants: 使用keras内置的pre-train的模型。
 
 
 ##### * title image source: https://www.pinterest.com/pin/365636063472803484/
