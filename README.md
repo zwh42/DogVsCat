@@ -42,7 +42,7 @@
     将带有预训练权重的ImageNet图像分类模型模型前端与自定的模型后端进行连接建立用于本项目的模型。这里主要使用了[VGG16, VGG19, ResNet](https://keras.io/applications/)模型前端, 并冻结其权重来进行特征提取，之后加入自定的几个全连接层用于本项目中的图片分类。
 
 ### 模型训练
-因所需的计算量较大, 本项目的模型训练使用了AWS p2.xlarge instance, 并参考了[这篇文档](http://discussions.youdaxue.com/t/aws/30961)进行了配置。实际运行的数据预处理和模型训练代码在这里: [model.py](./model.py).与上面的描述基本一致。 
+因所需的计算量较大, 本项目的模型训练使用了AWS p2.xlarge instance, 并参考了[这篇文档](http://discussions.youdaxue.com/t/aws/30961)进行了配置。关于数据预处理,可视化和模型搭建的代码可以参阅这个Jupyter Notebook。实际运行的数据预处理和模型训练代码在这里: [model.py](./model.py).hombrew model使用了10个Epoch进行训练，而对于采用带有预训练权重的 
 
 
 

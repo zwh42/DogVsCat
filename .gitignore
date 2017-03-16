@@ -3,3 +3,5 @@ train/
 test/
 .ipynb_checkpoints/
 data_gen/
+
+models/*
