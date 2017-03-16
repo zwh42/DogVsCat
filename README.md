@@ -17,7 +17,7 @@
 
 模型搭建将采用两种方式：
  
- 1. from scratch: 从头搭建一个卷积网络
+ 1. homebrew model: 从头搭建一个卷积网络
  2. stand on the shoulders of giants: 充分利用现存的已经经过实战检验的预训练过的模型，在此基础之上添加相应的结构获得希望的输出
  
 ### 模型评价指标 
@@ -35,9 +35,15 @@
 * 原始图片是通过文件名中的"dog"或者"cat"来标记🐶/🐱的，为方便之后模型的训练，这里采用了one-hot encoding的方法来将标记转换为2维的向量。
 
 ### 模型建立
-1. from sractch:
-	使用keras建立具有三层Convolutional Layer的模型，输入为(200, 200, 3)的图片, 输出为2维向量。
-2.  stand on the shoulders of giants: 使用keras内置的pre-train的模型。
+1. homebrew model:
+	使用keras建立具有三层Convolutional Layer的模型，输入为(200, 200, 3)的图片, 输出为2维向量。模型的具体结构如下图所示。需要注意的是模型的output layer的activation并没有设置，而将作为一个可以调整的参数用于后面的模型训练，以研究activation对output的影响。
+	![homebrew_model](./resource/homebrew_model.jpg)
+2.  stand on the shoulders of giants: 
+    将带有预训练权重的ImageNet图像分类模型模型前端与自定的模型后端进行连接建立用于本项目的模型。这里主要使用了[VGG16, VGG19, ResNet](https://keras.io/applications/)模型前端, 并冻结其权重来进行特征提取，之后加入自定的几个全连接层用于本项目中的图片分类。
+
+### 模型训练
+因所需的计算量较大, 本项目的模型训练使用了AWS p2.xlarge instance, 并参考了[这篇文档](http://discussions.youdaxue.com/t/aws/30961)进行了配置。实际运行的数据预处理和模型训练代码在这里: [model.py](./model.py).与上面的描述基本一致。 
+
 
 
 ##### * title image source: https://www.pinterest.com/pin/365636063472803484/
