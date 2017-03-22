@@ -1,4 +1,5 @@
-# Dog Vs Cat: A Convolutional Neural Network Based Dog/Cat Classifier
+# Dog Vs Cat 
+## A Convolutional Neural Network Based Dog/Cat Classifier
 
 ---
 ![DogVsCat](./resource/dog_vs_cat.jpg) *
@@ -21,20 +22,21 @@
  2. Transfer Learning: 充分利用现存的已经经过实战检验的预训练过的模型，在此基础之上添加相应的结构获得希望的输出
  
 ### 模型评价指标 
-本项目中训练获得的模型将以[log loss](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/details/evaluation)作为评价指标。其中测试集的来源主要有两个部分: 一部分来自从原始数据集保留的部分没有用于训练的图片，按照业界通行的标准计算正确率。另一部分来自从互联网中获取的部分图片，用于对给予感性的理解。同时训练获得的模型将用于预测Kaggle提供的标准测试集，并将预测结果提交Kaggle系统进行评价。
+本项目中训练获得的模型将以[log loss](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/details/evaluation)作为评价指标, 并以accuracy作为参考。其中测试集的来源主要有两个部分: 一部分来自从原始数据集保留的部分没有用于训练的图片，按照业界通行的标准计算正确率。另一部分来自从互联网中获取的部分图片，用于对给予感性的理解。同时训练获得的模型将用于预测Kaggle提供的标准测试集，并将预测结果提交Kaggle系统进行评价。
 
 ### 数据研究
 在建立模型前，首先对训练数据进行分析以获取数据的特性。
 
 * 原始数据集中共有25000张已标记的图片，其中猫/狗图片各12500张，数目相当，因此不存在训练样本数量不均衡所导致的模型偏差。
-* 原始数据集中图片的尺寸分布如图所示。可以看出图片的尺寸并不一致，多数图片的长宽都在600像素以下。本项目中的模型要求输入的图片具有同样的几何尺寸，因此需要对原始训练集的图片尺寸进行归一化处理使得图片具有统一的长宽数值。这里我们将图片尺寸同意放缩为224x224 pixel.
+* 原始数据集中图片的尺寸分布如图所示。可以看出图片的尺寸并不一致，多数图片的长宽都在600像素以下。本项目中的模型要求输入的图片具有同样的几何尺寸，因此需要对原始训练集的图片尺寸进行归一化处理使得图片具有统一的长宽数值，代码实现可以参考[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)中的『Load, Analysis, Visualize and Encode Data』代码块。这里我们将图片尺寸同意放缩为224x224 pixel.
+* 
 ![shape](./resource/shape_distribution.png)
 
 
-* 人工查看了部分图片，发现训练集已经包括了多种不同背景，光照条件，动物姿态，颜色等的图片。作为一个二分类问题，我认为现有的数据集已足够模型使用，不需要进行进一步的data augmentation. 另外也查看了尺寸远大于其他图片的两幅异常图片，发现除了尺寸之外与其他训练图片相比并无其他异常，因此决定保留这两幅图片在数据集中。
+* 人工查看了部分图片，发现训练集已经包括了多种不同背景，光照条件，动物姿态，颜色等的图片。作为一个二分类问题，我认为现有的数据集已足够模型使用，不需要进行进一步的data augmentation。另外也查看了尺寸远大于其他图片的两幅异常图片，发现除了尺寸之外与其他训练图片相比并无其他异常，因此决定保留这两幅图片在数据集中。
 * 原始图片是通过文件名中的"dog"或者"cat"来标记🐶/🐱的，为方便之后模型的训练，这里采用了one-hot encoding的方法来将标记转换为2维的向量。
 
-### 模型建立
+### 模型简介
 本项目中将使用卷积神经网络(Convolutional Neural Network，CNN)建立模型区分图片中猫狗。一个典型的卷积神经网络结构如下图所示：
 ![convnet](./resource/convnet.jpeg)
 [image source](http://cs231n.github.io/convolutional-networks/)
@@ -97,6 +99,7 @@
 	![homebrew_tuning1_loss](./resource/homebrew_deeper_loss.png)
 	* accuracy (final 0.83)
 	![homebrew_base_accuracy](./resource/homebrew_deeper_accuracy.png)
+
 可以发现经过29个epoch的traning后, model的loss和accuracy表现都有了一定程度的提升。
 
 * 根据上面的training结果，可以发现更deep的网络结构可能具有更好的表现，因此决定go one step further，继续增加一层Convolutional Layer，具体实现可以参考[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)中的『Homebrew Model: Go Even Deeper』代码块。以下是这一model的loss与accuray曲线：
@@ -104,34 +107,41 @@
 	![homebrew_tuning1_loss](./resource/homebrew_even_deeper_loss.png)
 	* accuracy (final 0.85)
 	![homebrew_base_accuracy](./resource/homebrew_even_deeper_accuracy.png)
-我们发现由于网络结构更深，训练所需要的epoch变得更多,同时model的loss和accuracy都具有了更进一步的提升。
+
+我们发现由于网络结构更深，训练所需要的epoch变得更多,经过43个epoch后model的log loss=0.35和accuracy = 0.85，都具有了更进一步的提升。
+
+综合以上的改进过程，可以看出对于从头搭建的homebrew model来说，加入Dropout Layer可以有效的改善overfitting的情况，减小learning rate对model的性能影响不大，增加网络的深度可以在一定程度上提升模型的性能。最终我们获得了**log loss = 0.35**, **accuray=0.85**的模型。 
 	
 		
- 
+#### Transfer Learning Model 的训练
+* 除了从零开始建立model, 我们也可以使用[Transfer Learning](https://www.zhihu.com/question/41979241)的方法将已训练好的model参数迁移到新的model中去，帮助新模型训练,加快模型的训练并优化模型。
+* 在本项目中，我们使用了已在[ImageNet](http://www.image-net.org/)数据集上训练过的[VGG16](https://arxiv.org/abs/1409.1556), [VGG19](https://arxiv.org/abs/1409.1556)以及[ResNet](https://arxiv.org/abs/1512.03385)并保留了相应参数值的model作为Transfer Learning的起点，作为新model的前端，保持参数值不可变,用以提取图像的特征。之后加入可训练的若干FC层和Dropout层，进行训练。 详细的模型结构和参数可以参考[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)中的『Transfer Learning: Model Creation』代码块及其运行结果。因为所采用的这几个带有预训练权重的模型都包含了非常多的Convolutional Layer，按照上面homebrew model的研究我们预测Transfer Learning将可以取得较好的结果。以下是各个模型的loss和accuracy曲线：
+	* VGG16
+		*  loss (final 0.62)
+		![vgg16_loss](./resource/VGG16_loss.png)
+		*  accuracy (final 0.96)
+		![vgg16_loss](./resource/VGG16_accuracy.png)
+
+	* VGG19
+		*  loss (final 0.47)
+		![vgg16_loss](./resource/VGG19_loss.png)
+		*  accuracy (final 0.97)
+		![vgg16_loss](./resource/VGG19_accuracy.png)
+			
+	* ResNet
+		*  loss (final 0.06)
+		![vgg16_loss](./resource/ResNet50_loss.png)
+		*  accuracy (final 0.98)
+		![vgg16_loss](./resource/ResNet50_accuracy.png)
+		
 
 
-* **homebrew model**
-    * loss 
-![homebrew_loss](./resource/homebrew_loss.png)
-    * accuracy (final accuracy = 0.80)
-![homebrew_accuracy](./resource/homebrew_accuracy.png)
-* **VGG16 model**
-    * loss
-![VGG16_loss](./resource/VGG16_loss.png)
-    * accuracy (final accuracy = 0.97)
-![VGG16_accuracy](./resource/VGG16_accuracy.png)
-* **VGG19 model**
-    * loss
-![VGG19_loss](./resource/VGG19_loss.png)
-    * accuracy (final accuracy = 0.95)
-![VGG19_accuracy](./resource/VGG19_accuracy.png)
-* **ResNet model**
-    * loss
-![ResNet_loss](./resource/ResNet_loss.png)
-    * accuracy (final accuracy = 0.99)
-![ResNet_accuracy](./resource/ResNet_accuracy.png)
+可以得到三个model都获得了非常高(>95%)的accuracy, 同时log loss也较小，尤其是ResNet的log loss远小于其他model.
 
-经过训练，homebrew model的accuracy达到了80%以上，采用带有预训练权重的model的accuracy均在95%以上。 
+### 模型基准测试结果
+我们使用最终获得的四个model(homebrew, VGG16, VGG19 and ResNet)对Kaggle提供的测试数据集进行了预测，并将预测结果提交到了Kaggle进行验证。具体代码可以参考[Jupyter Notebook](./DogVsCatModelPrediction.ipynb)。以下是从Kaggle获得的测试结果：
+	![kaggle_result](./resource/kaggle_result.jpg)
+可以看出整体的log loss都比本地的测试结果大一些。同时ResNet的log loss最小，Homebrew Model其次。 与Kaggle官方提供的排名对比，ResNet model的排名大概在800/1314的位置，homebrew model的排名大概在900/1314左右，与排名前列的log loss小于0.05的model相比还存在巨大的优化空间。
 
 同时，为对模型的实际预测能力有一个直观的认识，我们从也通过搜索引擎从互联网上获取了一些图片用于测试，以下是部分测试结果。测试代码可以参阅这个[Jupyter Notebook](./DogVsCatModelPrediction.ipynb)
 
@@ -148,12 +158,11 @@
 ![dog5_prediction](./resource/dog5.jpg_prediction.jpg)
 ![dog6_prediction](./resource/dog6.jpg_prediction.jpg)
 
-可以看出采用带有预训练权重的model的表现十分出色，对所有的测试图片都给出了正确的预测结果。而homebrew model在cat4和cat5图片上给出了错误的结果。因为homebrew model的结构相对简单，这一结果也并没有出乎意料。
+相较而言，采用带有预训练权重的model的表现较为出色，对绝大多数的测试图片都给出了正确的预测结果(VGG16在dog4图片给出了错误的预测)。而homebrew model在cat4和cat5图片上给出了错误的结果。因为homebrew model的结构相对简单，这一结果也并没有出乎意料。
 
 
 ### 总结
-在本项目中，我们使用了深度学习的方法来处理猫狗图片分类的问题，采用两种不同的路径搭建,训练并验证了CNN模型，最终都获得了较高的识别率(>80%)。相较而言，homebrew model还存在有较大的
-的改进空间，需要在今后继续研究。
+在本项目中，我们使用了深度学习的方法来处理猫狗图片分类的问题，采用两种不同的路径搭建,训练并验证了CNN模型，最终都获得了较高的识别率(>80%)。相较而言，homebrew model还存在有较大的的改进空间，需要在今后继续研究。
 
 
 
