@@ -5,6 +5,7 @@
 ![DogVsCat](./resource/dog_vs_cat.jpg) *
 
 
+（[PDF版 Project Summary](./ProjectSummary.pdf)）
 
 ### 项目概览
 使用深度学习方法识别一张图片是猫还是狗。
@@ -162,7 +163,11 @@
 
 
 ### 总结
-在本项目中，我们使用了深度学习的方法来处理猫狗图片分类的问题，采用两种不同的路径搭建,训练并验证了CNN模型，最终都获得了较高的识别率(>80%)。相较而言，homebrew model还存在有较大的的改进空间，需要在今后继续研究。
+在本项目中，我们使用了深度学习的方法来处理猫狗图片分类的问题，采用两种不同的路径搭建,训练并验证了CNN模型, 并将预测数据上传到Kaggle进行了测试。
+
+* 对于从零开始搭建的Homebrew model, 我们发现增加Convolutional Layer的层数会改善model的性能，但同时会增加model的计算时间。比较困难的是目前还不清楚的是对特定大小的数据集来说，对Convolutional Layer的层数是否有一定的限制，即随着Convolutional Layer的层数，model的性能的提升是否存在一个可以预知的上限。同时也需要研究在layer层数更多之后，early stop和dropout还能否有效的避免overfitting. 另外后续还可以尝试数据增强的方法来扩充训练集中样本的数量，观察是否可以提高模型的泛化性能。
+* 对于Transfer Learing model, 我们发现确实可以提高model的训练效率，并取得较高的accuracy.但同时不能忽略的是在本项目中VGG16与VGG19 model最终的log loss甚至要高于结构简单的多的homebrew model.具体原因值得继续深入研究，同时可以考虑"解冻"model的部分layer权重并参与训练，观察这类fine-tuning是否可以改善model的表现。
+
 
 
 
