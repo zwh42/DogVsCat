@@ -5,6 +5,8 @@
 ![DogVsCat](./resource/dog_vs_cat.jpg) *
 
 
+
+
 （[PDF版 Project Summary](./ProjectSummary.pdf)）
 
 ### 项目概览
@@ -23,13 +25,17 @@
  2. Transfer Learning: 充分利用现存的已经经过实战检验的预训练过的模型，在此基础之上添加相应的结构获得希望的输出
  
 ### 模型评价指标 
-本项目中训练获得的模型将以[log loss](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/details/evaluation)作为评价指标, 并以accuracy作为参考。其中测试集的来源主要有两个部分: 一部分来自从原始数据集保留的部分没有用于训练的图片，按照业界通行的标准计算正确率。另一部分来自从互联网中获取的部分图片，用于对给予感性的理解。同时训练获得的模型将用于预测Kaggle提供的标准测试集，并将预测结果提交Kaggle系统进行评价。
+本项目中训练获得的模型将以[log loss](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/details/evaluation) 作为评价指标。其定义为：
+![log_loss](./resource/logloss.png)
+其中 n为测试集中图片的数量，yi_hat为预测图中动物为狗的概率。如果实际图中的动物是狗，则yi=1, 否则yi=0.
+ 
+测试集的来源主要有两个部分: 一部分来自从原始数据集保留的部分没有用于训练的图片，按照业界通行的标准计算正确率。另一部分来自从互联网中获取的部分图片，用于对给予感性的理解。同时训练获得的模型将用于预测Kaggle提供的标准测试集，并将预测结果提交Kaggle系统进行评价。
 
 ### 数据研究
 在建立模型前，首先对训练数据进行分析以获取数据的特性。
 
 * 原始数据集中共有25000张已标记的图片，其中猫/狗图片各12500张，数目相当，因此不存在训练样本数量不均衡所导致的模型偏差。
-* 原始数据集中图片的尺寸分布如图所示。可以看出图片的尺寸并不一致，多数图片的长宽都在600像素以下。本项目中的模型要求输入的图片具有同样的几何尺寸，因此需要对原始训练集的图片尺寸进行归一化处理使得图片具有统一的长宽数值，代码实现可以参考[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)中的『Load, Analysis, Visualize and Encode Data』代码块。这里我们将图片尺寸同意放缩为224x224 pixel.
+* 原始数据集中图片的尺寸分布如图所示。可以看出图片的尺寸并不一致，多数图片的长宽都在600像素以下。本项目中的模型要求输入的图片具有同样的几何尺寸，因此需要对原始训练集的图片尺寸进行归一化处理使得图片具有统一的长宽数值，代码实现可以参考[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)中的『Load, Analysis, Visualize and Encode Data』代码块。这里我们将在生成训练和测试数据时将图片尺寸放缩为224x224 pixel.
 * 
 ![shape](./resource/shape_distribution.png)
 
@@ -47,26 +53,35 @@
 
 本项目中的模型将使用基于[TensorFlow](https://www.tensorflow.org/) backend的深度学习库[Keras](https://keras-cn.readthedocs.io/en/latest/)来建立。本项目中所采用的模型的整体结构与上图类似, 以下将简略介绍本项目模型的构成要素。
 
+* 卷积：在卷积神经网络这一框架下, 对图像(不同的数据窗口数据)和卷积核(滤波矩阵，一组固定的权重)做内积(逐个元素相乘再求和)的操作就是所谓的"卷积"操作，如下图示例所示。
+![convolution](./resource/convolution.jpg)
 * 卷积层(Convolutional layer，CONV)： 卷积神经网络中每层卷积层由若干卷积单元组成。卷积运算的目的是提取输入的不同特征，第一层卷积层可能只能提取一些低级的特征如边缘、线条和角等层级，更多层的网络能从低级特征中迭代提取更复杂的特征。
 
-* 线性整流层(Rectified Linear Units layer,RELU): 线性整流层（Rectified Linear Units layer, ReLU layer）使用线性整流（Rectified Linear Units, ReLU）f(x)= max(0,x) 作为这一层神经的激活函数（Activation function）。它可以增强判定函数和整个神经网络的非线性特性，而本身并不会改变卷积层。
-
+* 池化(pooling): 形式上，在获取到我们前面讨论过的卷积特征后，我们要确定池化区域的大小(假定为m * n)，来池化我们的卷积特征。那么，我们把卷积特征划分到数个大小为 m * n的不相交区域上，然后用这些区域的平均(或最大)特征来获取池化后的卷积特征。这些池化后的特征便可以用来做分类。下图为一个2*2 max pooling的例子。
+![max_pooling](./resource/max_pooling.png)
 * 池化层(Pooling Layer, POOL): 池化（Pooling）是卷积神经网络中另一个重要的概念，它实际上一种形式的向下采样。有多种不同形式的非线性池化函数，而其中“最大池化（Max pooling）”是最为常见的。它是将输入的图像划分为若干个矩形区域，对每个子区域输出最大值。直觉上，这种机制能够有效地原因在于，在发现一个特征之后，它的精确位置远不及它和其他特征的相对位置的关系重要。池化层会不断地减小数据的空间大小，因此参数的数量和计算量也会下降，这在一定程度上也控制了过拟合。通常来说，CNN的卷积层之间都会周期性地插入池化层。
 
 * 全连接层(full connection layer, FC):全连接层中的每一个neuron都会与全连接层之前的layer输出连接，在卷积神经网络中起到“分类器”的作用。
 
 * Dropout layer: 在CNN的实际应用中，常常会添加Dropout layer用以防止过拟合。Dropout layer作用方式为在训练过程中每次更新参数时随机断开一定百分比的输入神经元连接。
 
+* 激活函数(Activation)：在神经网络里，一个节点的激活函数定义了给予节点给定的输入或输入的集合的输出。激活函数可以给模型加入非线性因素，以提高简单线性模型的表达能力。常用的激活函数包括sigmoid，ReLU, softmax等。
+* Softmax: [Softmax](https://en.wikipedia.org/wiki/Softmax_function)是sigmoid函数在多分类问题上的推广,具体定义可以参考[这篇文档](http://cs231n.github.io/linear-classify/#softmax).
+
+* 线性整流层(Rectified Linear Units layer,RELU): 线性整流层（Rectified Linear Units layer, ReLU layer）使用线性整流（Rectified Linear Units, ReLU）f(x)= max(0,x) 作为这一层神经的激活函数（Activation function）。它可以增强判定函数和整个神经网络的非线性特性，而本身并不会改变卷积层。
+
+* Transfer Learning: 本项目中也会采用迁移学习的方法。迁移学习方法是一种机器学习框架，不同于传统的监督学习、无监督学习和半监督学习，这种方法通过将某一源领域的标注数据样本和目标领域的未标注样本或少量的标注样本中学习到一个紧凑的、有效的表示，然后将学习到的特征表示方法应用到目标领域中。迁移学习没有像传统的机器学习那样要求训练数据与测试数据必需服从相同的分布，因此，迁移学习能有效地在相似领域或任务之间进行信息的共享和迁移。在本项目猫狗分类这一问题中的数据集为包含有猫狗的图片，与[ImageNet](http://www.image-net.org/)数据集存在着很强的相关性，因此我们有理由相信使用基于经过ImageNet数据集训练过的模型可以帮助完成本项目的任务。
+
 ### 模型拟合
 本项目中模型的评价采用的评价指标为log loss.可以证明在二分类的情况下，log loss与cross entropy是等价的([reference](http://math.stackexchange.com/questions/1074276/how-is-logistic-loss-and-cross-entropy-related)).因此，keras搭建的模型的loss function将选用[categorical_crossentropy](https://keras.io/losses/)。没有选择binary_crossentropy是希望之后本项目的代码可以更方便的推广到多分类问题上。
 
-相应的，模型的最后输出层的激发函数选用[Softmax](https://en.wikipedia.org/wiki/Softmax_function)。
+相应的，模型的最后输出层的激活函数选用[Softmax](https://en.wikipedia.org/wiki/Softmax_function)。
 
 模型采用的optimizer为[rmsprop](http://sebastianruder.com/optimizing-gradient-descent/index.html#rmsprop) optimizer.
 
 
 ### 基准测试 Benchmark
-训练获得的模型将用于预测Kaggle提供的标准测试集, 并将测试结果提交到[Kaggle](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/submit)进行评估。并采用Kaggle使用的log loss作为评价指标。
+训练获得的模型将用于预测Kaggle提供的标准测试集, 并将测试结果提交到[Kaggle](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/submit)进行评估，并采用Kaggle使用的log loss作为评价指标，参考kaggle该项目的leaderboard定义阈值为log loss小于1.0.
 
 ### 模型训练与评估
 因所需的计算量较大, 本项目的模型训练使用了AWS p2.xlarge instance, 并参考了[这篇文档](http://discussions.youdaxue.com/t/aws/30961)进行了配置。关于数据预处理,可视化和模型搭建的代码可以参阅这个[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)。
@@ -116,7 +131,7 @@
 		
 #### Transfer Learning Model 的训练
 * 除了从零开始建立model, 我们也可以使用[Transfer Learning](https://www.zhihu.com/question/41979241)的方法将已训练好的model参数迁移到新的model中去，帮助新模型训练,加快模型的训练并优化模型。
-* 在本项目中，我们使用了已在[ImageNet](http://www.image-net.org/)数据集上训练过的[VGG16](https://arxiv.org/abs/1409.1556), [VGG19](https://arxiv.org/abs/1409.1556)以及[ResNet](https://arxiv.org/abs/1512.03385)并保留了相应参数值的model作为Transfer Learning的起点，作为新model的前端，保持参数值不可变,用以提取图像的特征。之后加入可训练的若干FC层和Dropout层，进行训练。 详细的模型结构和参数可以参考[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)中的『Transfer Learning: Model Creation』代码块及其运行结果。因为所采用的这几个带有预训练权重的模型都包含了非常多的Convolutional Layer，按照上面homebrew model的研究我们预测Transfer Learning将可以取得较好的结果。以下是各个模型的loss和accuracy曲线：
+* 在本项目中，我们使用了已在上训练过的[VGG16](https://arxiv.org/abs/1409.1556), [VGG19](https://arxiv.org/abs/1409.1556)以及[ResNet](https://arxiv.org/abs/1512.03385)并保留了相应参数值的model作为Transfer Learning的起点，作为新model的前端，保持参数值不可变,用以提取图像的特征。之后加入可训练的若干FC层和Dropout层，进行训练。 详细的模型结构和参数可以参考[Jupyter Notebook](./DogVsCatFlowSetup.ipynb)中的『Transfer Learning: Model Creation』代码块及其运行结果。因为所采用的这几个带有预训练权重的模型都包含了非常多的Convolutional Layer，按照上面homebrew model的研究我们预测Transfer Learning将可以取得较好的结果。以下是各个模型的loss和accuracy曲线：
 	* VGG16
 		*  loss (final 0.62)
 		![vgg16_loss](./resource/VGG16_loss.png)
@@ -142,7 +157,7 @@
 ### 模型基准测试结果
 我们使用最终获得的四个model(homebrew, VGG16, VGG19 and ResNet)对Kaggle提供的测试数据集进行了预测，并将预测结果提交到了Kaggle进行验证。具体代码可以参考[Jupyter Notebook](./DogVsCatModelPrediction.ipynb)。以下是从Kaggle获得的测试结果：
 	![kaggle_result](./resource/kaggle_result.jpg)
-可以看出整体的log loss都比本地的测试结果大一些。同时ResNet的log loss最小，Homebrew Model其次。 与Kaggle官方提供的排名对比，ResNet model的排名大概在800/1314的位置，homebrew model的排名大概在900/1314左右，与排名前列的log loss小于0.05的model相比还存在巨大的优化空间。
+可以看出整体的log loss都比本地的测试结果大一些。同时ResNet的log loss最小，Homebrew Model其次，均小于我们之前定义的阈值1.0。 与Kaggle官方提供的排名对比，ResNet model的排名大概在800/1314的位置，homebrew model的排名大概在900/1314左右，与排名前列的log loss小于0.05的model相比还存在巨大的优化空间。
 
 同时，为对模型的实际预测能力有一个直观的认识，我们从也通过搜索引擎从互联网上获取了一些图片用于测试，以下是部分测试结果。测试代码可以参阅这个[Jupyter Notebook](./DogVsCatModelPrediction.ipynb)
 
@@ -165,8 +180,15 @@
 ### 总结
 在本项目中，我们使用了深度学习的方法来处理猫狗图片分类的问题，采用两种不同的路径搭建,训练并验证了CNN模型, 并将预测数据上传到Kaggle进行了测试。
 
-* 对于从零开始搭建的Homebrew model, 我们发现增加Convolutional Layer的层数会改善model的性能，但同时会增加model的计算时间。比较困难的是目前还不清楚的是对特定大小的数据集来说，对Convolutional Layer的层数是否有一定的限制，即随着Convolutional Layer的层数，model的性能的提升是否存在一个可以预知的上限。同时也需要研究在layer层数更多之后，early stop和dropout还能否有效的避免overfitting. 另外后续还可以尝试数据增强的方法来扩充训练集中样本的数量，观察是否可以提高模型的泛化性能。
-* 对于Transfer Learing model, 我们发现确实可以提高model的训练效率，并取得较高的accuracy.但同时不能忽略的是在本项目中VGG16与VGG19 model最终的log loss甚至要高于结构简单的多的homebrew model.具体原因值得继续深入研究，同时可以考虑"解冻"model的部分layer权重并参与训练，观察这类fine-tuning是否可以改善model的表现。
+#### Homebrew Model
+* 方案总结：首先使用Keras搭建了具有三层Convolutional layer的model作为初始base model, 之后基于这个model做了相应的tunning,尝试调整drop out rate，learning rate，以及添加更多的卷积层。经过试验可以看出对于从头搭建的homebrew model来说，加入Dropout Layer可以有效的改善overfitting的情况，减小learning rate对model的性能影响不大，增加网络的深度可以在一定程度上提升模型的性能。我们发现增加Convolutional Layer的层数会改善model的性能，但同时会增加model的计算时间。
+* 比较困难的点：目前还不清楚的是对特定大小的数据集来说，对Convolutional Layer的层数是否有一定的限制，即随着Convolutional Layer的层数，model的性能的提升是否存在一个可以预知的上限。同时也需要研究在layer层数更多之后，early stop和dropout还能否有效的避免overfitting.
+* 后续可能的改进: 还可以尝试数据增强的方法来扩充训练集中样本的数量，观察是否可以提高模型的泛化性能。同时更多的数据可能可以支持更深的网络。
+
+#### Transfer Learing model
+* 方案总结： 对于Transfer Learing model, 我们发现利用带有预训练权重的模型可以提高model的训练效率，并取得较高的accuracy.
+* 比较困难的点：是在本项目中VGG16与VGG19 model最终的log loss甚至要高于结构简单的多的homebrew model，这是我们所没有预料到的，具体原因值得继续深入研究。
+*后续可能的改进：同时可以考虑"解冻"model的部分layer权重并参与训练，观察这类fine-tuning是否可以改善model的表现。
 
 
 
